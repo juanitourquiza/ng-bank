@@ -27,6 +27,20 @@ export class FinancialProductsService {
       );
   }
 
+  updateProduct(id: string, product: FinancialProduct): Observable<FinancialProduct> {
+    return this.http.put<FinancialProduct>(`${this.baseUrl}/bp/products/${id}`, product)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
+  deleteProduct(id: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/bp/products/${id}`)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   private handleError(error: HttpErrorResponse): Observable<never> {
     let errorMessage = 'An unknown error occurred';
     

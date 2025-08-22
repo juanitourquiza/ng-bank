@@ -37,10 +37,19 @@ export class ProductList implements OnInit, OnDestroy {
   // Opciones para el selector de cantidad de registros
   recordsPerPageOptions = [5, 10, 20];
 
-  // Modal de agregar producto
+  // Modal de agregar/editar producto
   showAddProductModal = false;
   productForm: FormGroup;
   isSubmitting = false;
+  isEditMode = false;
+  editingProductId: string | null = null;
+
+  // Dropdown de acciones
+  activeDropdownId: string | null = null;
+
+  // Modal de confirmación de eliminación
+  showDeleteModal = false;
+  productToDelete: FinancialProduct | null = null;
 
   constructor(
     private financialProductsService: FinancialProductsService,
@@ -55,6 +64,7 @@ export class ProductList implements OnInit, OnDestroy {
   ngOnInit(): void {
     this.initializeServices();
     this.loadFinancialProducts();
+    this.setupGlobalClickListener();
   }
 
   ngOnDestroy(): void {
@@ -175,6 +185,14 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   /**
+   * Formatea la fecha para input de tipo date
+   */
+  formatDateForInput(dateString: string | Date): string {
+    const date = new Date(dateString);
+    return date.toISOString().split('T')[0];
+  }
+
+  /**
    * Reinicia los filtros y recarga los datos
    */
   clearFilters(): void {
@@ -201,7 +219,48 @@ export class ProductList implements OnInit, OnDestroy {
    * Muestra el modal de agregar producto
    */
   navigateToAddProduct(): void {
+    this.isEditMode = false;
+    this.editingProductId = null;
+    this.productForm.reset();
     this.showAddProductModal = true;
+  }
+
+  /**
+   * Maneja el toggle del dropdown de acciones
+   */
+  toggleDropdown(productId: string, event: Event): void {
+    event.stopPropagation();
+    this.activeDropdownId = this.activeDropdownId === productId ? null : productId;
+  }
+
+  /**
+   * Abre el modal de edición con los datos del producto
+   */
+  editProduct(product: FinancialProduct): void {
+    this.isEditMode = true;
+    this.editingProductId = product.id;
+    
+    // Precargar datos en el formulario
+    this.productForm.patchValue({
+      id: product.id,
+      name: product.name,
+      description: product.description,
+      logo: product.logo,
+      date_release: this.formatDateForInput(product.date_release),
+      date_revision: this.formatDateForInput(product.date_revision)
+    });
+    
+    this.showAddProductModal = true;
+    this.activeDropdownId = null;
+  }
+
+  /**
+   * Abre el modal de confirmación de eliminación
+   */
+  confirmDeleteProduct(product: FinancialProduct): void {
+    this.productToDelete = product;
+    this.showDeleteModal = true;
+    this.activeDropdownId = null;
   }
 
   /**
@@ -233,7 +292,7 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   /**
-   * Envía el formulario para crear un nuevo producto
+   * Envía el formulario para crear o actualizar un producto
    */
   async onSubmitProduct(): Promise<void> {
     if (this.productForm.valid && !this.isSubmitting) {
@@ -246,11 +305,16 @@ export class ProductList implements OnInit, OnDestroy {
           date_revision: new Date(this.productForm.value.date_revision)
         };
 
-        await this.financialProductsService.createProduct(formData).toPromise();
+        if (this.isEditMode && this.editingProductId) {
+          await this.financialProductsService.updateProduct(this.editingProductId, formData).toPromise();
+        } else {
+          await this.financialProductsService.createProduct(formData).toPromise();
+        }
+        
         this.closeModal();
         this.loadFinancialProducts(); // Recargar la lista
       } catch (error) {
-        console.error('Error creating product:', error);
+        console.error('Error saving product:', error);
       } finally {
         this.isSubmitting = false;
       }
@@ -271,6 +335,35 @@ export class ProductList implements OnInit, OnDestroy {
     this.showAddProductModal = false;
     this.productForm.reset();
     this.isSubmitting = false;
+    this.isEditMode = false;
+    this.editingProductId = null;
+  }
+
+  /**
+   * Cierra el modal de confirmación de eliminación
+   */
+  closeDeleteModal(): void {
+    this.showDeleteModal = false;
+    this.productToDelete = null;
+  }
+
+  /**
+   * Confirma y ejecuta la eliminación del producto
+   */
+  async deleteProduct(): Promise<void> {
+    if (this.productToDelete && !this.isSubmitting) {
+      this.isSubmitting = true;
+      
+      try {
+        await this.financialProductsService.deleteProduct(this.productToDelete.id).toPromise();
+        this.closeDeleteModal();
+        this.loadFinancialProducts(); // Recargar la lista
+      } catch (error) {
+        console.error('Error deleting product:', error);
+      } finally {
+        this.isSubmitting = false;
+      }
+    }
   }
 
   /**
@@ -301,5 +394,20 @@ export class ProductList implements OnInit, OnDestroy {
   isFieldInvalid(fieldName: string): boolean {
     const field = this.productForm.get(fieldName);
     return !!(field?.errors && field.touched);
+  }
+
+  /**
+   * Configura el listener global para cerrar dropdown al hacer clic fuera
+   */
+  private setupGlobalClickListener(): void {
+    document.addEventListener('click', (event) => {
+      if (this.activeDropdownId) {
+        const target = event.target as HTMLElement;
+        const dropdown = target.closest('.actions-menu');
+        if (!dropdown) {
+          this.activeDropdownId = null;
+        }
+      }
+    });
   }
 }

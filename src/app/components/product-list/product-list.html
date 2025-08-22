@@ -51,6 +51,7 @@
         Fecha de reestructuración
         <div class="info-icon"></div>
       </div>
+      <div class="header-item">Acciones</div>
     </div>
 
     <!-- Barra de carga -->
@@ -74,6 +75,30 @@
             <div class="product-description">{{ product.description }}</div>
             <div class="date-text">{{ formatDate(product.date_release) }}</div>
             <div class="date-text">{{ formatDate(product.date_revision) }}</div>
+            <div class="actions-cell">
+              <div class="actions-menu" [class.active]="activeDropdownId === product.id">
+                <button 
+                  class="menu-trigger" 
+                  (click)="toggleDropdown(product.id, $event)"
+                  type="button">
+                  ⋮
+                </button>
+                @if (activeDropdownId === product.id) {
+                  <div class="dropdown-menu">
+                    <button 
+                      class="dropdown-item" 
+                      (click)="editProduct(product)">
+                      Editar
+                    </button>
+                    <button 
+                      class="dropdown-item delete" 
+                      (click)="confirmDeleteProduct(product)">
+                      Eliminar
+                    </button>
+                  </div>
+                }
+              </div>
+            </div>
           </div>
         }
       }
@@ -113,7 +138,7 @@
   <div class="modal-backdrop" (click)="onModalBackdropClick($event)">
     <div class="modal-container">
       <div class="modal-header">
-        <h2>Formulario de Registro</h2>
+        <h2>{{ isEditMode ? 'Editar Producto' : 'Formulario de Registro' }}</h2>
         <button class="modal-close" (click)="closeModal()">×</button>
       </div>
 
@@ -127,6 +152,7 @@
               formControlName="id"
               class="form-input"
               [class.error]="isFieldInvalid('id')"
+              [readonly]="isEditMode"
               placeholder="Ingrese el ID del producto"
             />
             @if (isFieldInvalid('id')) {
@@ -232,6 +258,34 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+}
+
+<!-- Modal de Confirmación de Eliminación -->
+@if (showDeleteModal) {
+  <div class="modal-backdrop" (click)="closeDeleteModal()">
+    <div class="delete-modal-container" (click)="$event.stopPropagation()">
+      <h3>¿Estas seguro de eliminar el producto {{ productToDelete?.name }}?</h3>
+      
+      <div class="delete-modal-actions">
+        <button 
+          class="btn btn-cancel"
+          (click)="closeDeleteModal()"
+          [disabled]="isSubmitting">
+          Cancelar
+        </button>
+        <button 
+          class="btn btn-confirm"
+          (click)="deleteProduct()"
+          [disabled]="isSubmitting">
+          @if (isSubmitting) {
+            Eliminando...
+          } @else {
+            Confirmar
+          }
+        </button>
+      </div>
     </div>
   </div>
 }
