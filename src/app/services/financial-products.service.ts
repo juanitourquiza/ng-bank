@@ -20,6 +20,13 @@ export class FinancialProductsService {
       );
   }
 
+  createProduct(product: Omit<FinancialProduct, 'id'>): Observable<FinancialProduct> {
+    return this.http.post<FinancialProduct>(`${this.baseUrl}/bp/products`, product)
+      .pipe(
+        catchError(this.handleError)
+      );
+  }
+
   private handleError(error: HttpErrorResponse): Observable<never> {
     let errorMessage = 'An unknown error occurred';
     

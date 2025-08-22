@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { FormsModule } from '@angular/forms';
+import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { Router } from '@angular/router';
 import { Subject, takeUntil, combineLatest } from 'rxjs';
 import { FinancialProductsService } from '../../services/financial-products.service';
 import { PaginationService } from '../../services/pagination.service';
@@ -9,7 +10,7 @@ import { FinancialProduct, PaginationConfig, SearchFilters } from '../../interfa
 
 @Component({
   selector: 'app-product-list',
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './product-list.html',
   styleUrl: './product-list.scss'
 })
@@ -36,11 +37,20 @@ export class ProductList implements OnInit, OnDestroy {
   // Opciones para el selector de cantidad de registros
   recordsPerPageOptions = [5, 10, 20];
 
+  // Modal de agregar producto
+  showAddProductModal = false;
+  productForm: FormGroup;
+  isSubmitting = false;
+
   constructor(
     private financialProductsService: FinancialProductsService,
     private paginationService: PaginationService,
-    private filterService: FilterService
-  ) {}
+    private filterService: FilterService,
+    private router: Router,
+    private fb: FormBuilder
+  ) {
+    this.productForm = this.createForm();
+  }
 
   ngOnInit(): void {
     this.initializeServices();
@@ -185,5 +195,111 @@ export class ProductList implements OnInit, OnDestroy {
    */
   goToPreviousPage(): void {
     this.paginationService.goToPreviousPage();
+  }
+
+  /**
+   * Muestra el modal de agregar producto
+   */
+  navigateToAddProduct(): void {
+    this.showAddProductModal = true;
+  }
+
+  /**
+   * Crea el formulario reactivo para agregar productos
+   */
+  private createForm(): FormGroup {
+    return this.fb.group({
+      id: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(10)]],
+      name: ['', [Validators.required, Validators.minLength(5), Validators.maxLength(100)]],
+      description: ['', [Validators.required, Validators.minLength(10), Validators.maxLength(200)]],
+      logo: ['', Validators.required],
+      date_release: ['', Validators.required],
+      date_revision: ['', Validators.required]
+    });
+  }
+
+  /**
+   * Actualiza la fecha de revisión cuando cambia la fecha de liberación
+   */
+  onDateReleaseChange(): void {
+    const releaseDate = this.productForm.get('date_release')?.value;
+    if (releaseDate) {
+      const revisionDate = new Date(releaseDate);
+      revisionDate.setFullYear(revisionDate.getFullYear() + 1);
+      this.productForm.patchValue({
+        date_revision: revisionDate.toISOString().split('T')[0]
+      });
+    }
+  }
+
+  /**
+   * Envía el formulario para crear un nuevo producto
+   */
+  async onSubmitProduct(): Promise<void> {
+    if (this.productForm.valid && !this.isSubmitting) {
+      this.isSubmitting = true;
+      
+      try {
+        const formData = {
+          ...this.productForm.value,
+          date_release: new Date(this.productForm.value.date_release),
+          date_revision: new Date(this.productForm.value.date_revision)
+        };
+
+        await this.financialProductsService.createProduct(formData).toPromise();
+        this.closeModal();
+        this.loadFinancialProducts(); // Recargar la lista
+      } catch (error) {
+        console.error('Error creating product:', error);
+      } finally {
+        this.isSubmitting = false;
+      }
+    }
+  }
+
+  /**
+   * Reinicia el formulario
+   */
+  onResetProduct(): void {
+    this.productForm.reset();
+  }
+
+  /**
+   * Cierra el modal
+   */
+  closeModal(): void {
+    this.showAddProductModal = false;
+    this.productForm.reset();
+    this.isSubmitting = false;
+  }
+
+  /**
+   * Maneja el clic en el backdrop del modal
+   */
+  onModalBackdropClick(event: Event): void {
+    if (event.target === event.currentTarget) {
+      this.closeModal();
+    }
+  }
+
+  /**
+   * Obtiene mensaje de error para un campo específico
+   */
+  getFieldError(fieldName: string): string {
+    const field = this.productForm.get(fieldName);
+    if (field?.errors && field.touched) {
+      if (field.errors['required']) return `${fieldName} es requerido`;
+      if (field.errors['minlength']) return `${fieldName} debe tener al menos ${field.errors['minlength'].requiredLength} caracteres`;
+      if (field.errors['maxlength']) return `${fieldName} debe tener máximo ${field.errors['maxlength'].requiredLength} caracteres`;
+    }
+    return '';
+  }
+
+  /**
+   * Verifica si un campo es inválido
+   */
+  isFieldInvalid(fieldName: string): boolean {
+    const field = this.productForm.get(fieldName);
+    return !!(field?.errors && field.touched);
   }
 }
