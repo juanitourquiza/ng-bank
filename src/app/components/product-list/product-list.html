@@ -1,0 +1,104 @@
+<div class="container">
+  <!-- Header -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon"></div>
+      <div class="logo-text">BANCO</div>
+    </div>
+    
+    <div class="search-container">
+      <input 
+        type="text" 
+        class="search-box" 
+        placeholder="Search..."
+        [(ngModel)]="searchFilters.searchTerm"
+        (input)="onSearchChange()"
+        [disabled]="isLoading">
+    </div>
+  </div>
+
+  <!-- Mensaje de error -->
+  @if (errorMessage) {
+    <div class="error-message">
+      <span class="error-icon">⚠️</span>
+      {{ errorMessage }}
+      <button class="retry-button" (click)="loadFinancialProducts()">
+        Reintentar
+      </button>
+    </div>
+  }
+
+  <!-- Tabla de productos -->
+  <div class="table-container">
+    <!-- Header de la tabla -->
+    <div class="table-header">
+      <div class="header-item">Logo</div>
+      <div class="header-item">Nombre del producto</div>
+      <div class="header-item">
+        Descripción
+        <div class="info-icon"></div>
+      </div>
+      <div class="header-item">
+        Fecha de liberación
+        <div class="info-icon"></div>
+      </div>
+      <div class="header-item">
+        Fecha de reestructuración
+        <div class="info-icon"></div>
+      </div>
+    </div>
+
+    <!-- Barra de carga -->
+    @if (isLoading) {
+      <div class="loading-bar"></div>
+    }
+
+    <!-- Cuerpo de la tabla -->
+    <div class="table-body">
+      @if (!isLoading && !errorMessage && displayedProducts.length > 0) {
+        @for (product of displayedProducts; track product.id) {
+          <div class="table-row">
+            <div class="product-logo-container">
+              <img
+                [src]="product.logo"
+                [alt]="product.name + ' logo'"
+                (error)="$any($event.target).src='https://via.placeholder.com/48x48/cccccc/ffffff?text=?'"
+                class="product-logo">
+            </div>
+            <div class="product-name">{{ product.name }}</div>
+            <div class="product-description">{{ product.description }}</div>
+            <div class="date-text">{{ formatDate(product.date_release) }}</div>
+            <div class="date-text">{{ formatDate(product.date_revision) }}</div>
+          </div>
+        }
+      }
+
+      <!-- Mensaje cuando no hay resultados -->
+      @if (!isLoading && !errorMessage && displayedProducts.length === 0) {
+        <div class="no-results">
+          <p>No se encontraron productos que coincidan con su búsqueda.</p>
+          <button class="clear-filters-button" (click)="clearFilters()">
+            Limpiar filtros
+          </button>
+        </div>
+      }
+    </div>
+
+    <!-- Footer con controles -->
+    @if (!isLoading && !errorMessage && filteredProducts.length > 0) {
+      <div class="footer">
+        <div class="results-count">{{ getResultsText() }}</div>
+        <div class="pagination">
+          <select 
+            class="page-select"
+            [(ngModel)]="paginationConfig.itemsPerPage"
+            (change)="onRecordsPerPageChange()">
+            @for (option of recordsPerPageOptions; track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+      </div>
+    }
+  </div>
+</div>
