@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, ReactiveFormsModule, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -12,7 +12,8 @@ import { FinancialProduct, PaginationConfig, SearchFilters } from '../../interfa
   selector: 'app-product-list',
   imports: [CommonModule, FormsModule, ReactiveFormsModule],
   templateUrl: './product-list.html',
-  styleUrl: './product-list.scss'
+  styleUrl: './product-list.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class ProductList implements OnInit, OnDestroy {
   private destroy$ = new Subject<void>();
@@ -56,15 +57,16 @@ export class ProductList implements OnInit, OnDestroy {
     private paginationService: PaginationService,
     private filterService: FilterService,
     private router: Router,
-    private fb: FormBuilder
+    private fb: FormBuilder,
+    private cdr: ChangeDetectorRef
   ) {
     this.productForm = this.createForm();
   }
 
   ngOnInit(): void {
-    this.initializeServices();
-    this.loadFinancialProducts();
     this.setupGlobalClickListener();
+    this.loadFinancialProducts();
+    this.initializeServices();
   }
 
   ngOnDestroy(): void {
@@ -90,24 +92,35 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   /**
-   * Carga los productos financieros desde la API
+   * Carga la lista de productos financieros desde el servicio
    */
   loadFinancialProducts(): void {
     this.isLoading = true;
     this.errorMessage = '';
-
+    
     this.financialProductsService.getFinancialProducts()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (products) => {
           this.products = products;
-          this.applyFilters();
+          this.filteredProducts = products; // Inicializar productos filtrados
           this.isLoading = false;
+          
+          // Inicializar paginación con todos los productos
+          this.paginationService.updatePaginationConfig({
+            totalItems: products.length,
+            currentPage: 1
+          });
+          
+          // Mostrar productos directamente sin filtros iniciales
+          this.updateDisplayedProducts();
+          this.cdr.markForCheck();
         },
         error: (error) => {
+          console.error('Error loading financial products:', error);
           this.errorMessage = 'Error al cargar los productos financieros. Por favor, intente nuevamente.';
           this.isLoading = false;
-          console.error('Error loading products:', error);
+          this.cdr.markForCheck();
         }
       });
   }
@@ -116,6 +129,13 @@ export class ProductList implements OnInit, OnDestroy {
    * Aplica filtros de búsqueda y actualiza la paginación
    */
   applyFilters(): void {
+    // Si no hay productos cargados, salir
+    if (!this.products || this.products.length === 0) {
+      this.filteredProducts = [];
+      this.displayedProducts = [];
+      return;
+    }
+
     // Usar el servicio de filtros
     this.filteredProducts = this.filterService.applyFilters(this.products);
 
@@ -124,6 +144,9 @@ export class ProductList implements OnInit, OnDestroy {
       totalItems: this.filteredProducts.length,
       currentPage: 1 // Reset a la primera página
     });
+    
+    // Actualizar productos mostrados inmediatamente
+    this.updateDisplayedProducts();
   }
 
   /**
@@ -292,40 +315,56 @@ export class ProductList implements OnInit, OnDestroy {
   }
 
   /**
-   * Envía el formulario para crear o actualizar un producto
-   */
-  async onSubmitProduct(): Promise<void> {
-    if (this.productForm.valid && !this.isSubmitting) {
-      this.isSubmitting = true;
-      
-      try {
-        const formData = {
-          ...this.productForm.value,
-          date_release: new Date(this.productForm.value.date_release),
-          date_revision: new Date(this.productForm.value.date_revision)
-        };
-
-        if (this.isEditMode && this.editingProductId) {
-          await this.financialProductsService.updateProduct(this.editingProductId, formData).toPromise();
-        } else {
-          await this.financialProductsService.createProduct(formData).toPromise();
-        }
-        
-        this.closeModal();
-        this.loadFinancialProducts(); // Recargar la lista
-      } catch (error) {
-        console.error('Error saving product:', error);
-      } finally {
-        this.isSubmitting = false;
-      }
-    }
-  }
-
-  /**
-   * Reinicia el formulario
+   * Resetea el formulario del producto
    */
   onResetProduct(): void {
     this.productForm.reset();
+  }
+
+  /**
+   * Maneja el envío del formulario para crear o actualizar productos
+   */
+  onSubmitProduct(): void {
+    if (this.productForm.valid && !this.isSubmitting) {
+      this.isSubmitting = true;
+      const formData = this.productForm.value as FinancialProduct;
+      
+      if (this.isEditMode && this.editingProductId) {
+        // Actualizar producto existente
+        this.financialProductsService.updateProduct(this.editingProductId, formData)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.isSubmitting = false;
+              this.closeModal();
+              this.loadFinancialProducts();
+              this.cdr.markForCheck();
+            },
+            error: (error) => {
+              console.error('Error updating product:', error);
+              this.isSubmitting = false;
+              this.cdr.markForCheck();
+            }
+          });
+      } else {
+        // Crear nuevo producto
+        this.financialProductsService.createProduct(formData)
+          .pipe(takeUntil(this.destroy$))
+          .subscribe({
+            next: () => {
+              this.isSubmitting = false;
+              this.closeModal();
+              this.loadFinancialProducts();
+              this.cdr.markForCheck();
+            },
+            error: (error) => {
+              console.error('Error creating product:', error);
+              this.isSubmitting = false;
+              this.cdr.markForCheck();
+            }
+          });
+      }
+    }
   }
 
   /**
@@ -350,19 +389,25 @@ export class ProductList implements OnInit, OnDestroy {
   /**
    * Confirma y ejecuta la eliminación del producto
    */
-  async deleteProduct(): Promise<void> {
+  deleteProduct(): void {
     if (this.productToDelete && !this.isSubmitting) {
       this.isSubmitting = true;
       
-      try {
-        await this.financialProductsService.deleteProduct(this.productToDelete.id).toPromise();
-        this.closeDeleteModal();
-        this.loadFinancialProducts(); // Recargar la lista
-      } catch (error) {
-        console.error('Error deleting product:', error);
-      } finally {
-        this.isSubmitting = false;
-      }
+      this.financialProductsService.deleteProduct(this.productToDelete.id)
+        .pipe(takeUntil(this.destroy$))
+        .subscribe({
+          next: () => {
+            this.closeDeleteModal();
+            this.loadFinancialProducts();
+            this.isSubmitting = false;
+            this.cdr.markForCheck();
+          },
+          error: (error) => {
+            console.error('Error deleting product:', error);
+            this.isSubmitting = false;
+            this.cdr.markForCheck();
+          }
+        });
     }
   }
 
@@ -406,8 +451,23 @@ export class ProductList implements OnInit, OnDestroy {
         const dropdown = target.closest('.actions-menu');
         if (!dropdown) {
           this.activeDropdownId = null;
+          this.cdr.markForCheck(); // Manual change detection
         }
       }
     });
+  }
+
+  /**
+   * TrackBy function para optimizar renderizado de lista
+   */
+  trackByProductId(index: number, product: FinancialProduct): string {
+    return product.id;
+  }
+
+  /**
+   * TrackBy function para opciones de paginación
+   */
+  trackByValue(index: number, value: number): number {
+    return value;
   }
 }

@@ -1112,3 +1112,267 @@ $hover-color: #f8f9fa;
     }
   }
 }
+
+// Skeleton Loading Styles
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: loading 1.5s infinite;
+  border-radius: 4px;
+}
+
+.skeleton-row {
+  .skeleton-logo {
+    width: 48px;
+    height: 48px;
+    border-radius: 8px;
+  }
+
+  .skeleton-text {
+    height: 16px;
+    border-radius: 8px;
+    
+    &.skeleton-title {
+      width: 80%;
+    }
+    
+    &.skeleton-description {
+      width: 90%;
+    }
+    
+    &.skeleton-date {
+      width: 70%;
+    }
+  }
+
+  .skeleton-action {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+  }
+}
+
+@keyframes loading {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+// Enhanced Responsive Design
+@media (max-width: 1200px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .table-header,
+  .table-row {
+    grid-template-columns: 60px 1.5fr 2fr 1.2fr 1.2fr 60px;
+    gap: 15px;
+    padding: 16px 20px;
+  }
+}
+
+@media (max-width: 992px) {
+  .search-container {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 1rem;
+  }
+
+  .add-button {
+    width: 100%;
+    max-width: 200px;
+    align-self: center;
+  }
+
+  .table-header,
+  .table-row {
+    grid-template-columns: 50px 1fr 1.5fr 1fr 1fr 50px;
+    gap: 10px;
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+}
+
+// Mobile-first responsive improvements
+@media (max-width: 768px) {
+  .container {
+    padding: 0.5rem;
+  }
+
+  .logo-text {
+    font-size: 22px;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
+  // Stack layout for mobile
+  .table-container {
+    overflow-x: visible;
+  }
+
+  .table-header {
+    display: none; // Hide header on mobile
+  }
+
+  .table-row {
+    display: block;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    
+    &:hover {
+      transform: none; // Remove hover transform on mobile
+    }
+  }
+
+  .skeleton-row {
+    display: block;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    
+    .skeleton {
+      margin-bottom: 12px;
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    .skeleton-logo {
+      width: 60px;
+      height: 60px;
+      margin: 0 auto 1rem auto;
+    }
+
+    .skeleton-text {
+      width: 100%;
+      height: 20px;
+      
+      &.skeleton-title {
+        height: 24px;
+        margin-bottom: 8px;
+      }
+      
+      &.skeleton-description {
+        height: 18px;
+        margin-bottom: 12px;
+      }
+    }
+  }
+
+  .product-logo-container {
+    text-align: center;
+    margin-bottom: 1rem;
+    
+    .product-logo {
+      width: 60px;
+      height: 60px;
+    }
+  }
+
+  .product-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    text-align: center;
+  }
+
+  .product-description {
+    font-size: 14px;
+    margin-bottom: 1rem;
+    line-height: 1.4;
+    text-align: center;
+  }
+
+  .actions-cell {
+    text-align: center;
+  }
+
+  .actions-menu .dropdown-menu {
+    right: 50%;
+    transform: translateX(50%);
+    min-width: 140px;
+  }
+
+  // Modal responsive improvements
+  .modal-container {
+    margin: 1rem;
+    max-height: 95vh;
+  }
+
+  .modal-form .form-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .delete-modal-container {
+    margin: 1rem;
+    padding: 1.5rem;
+
+    h3 {
+      font-size: 1rem;
+      margin-bottom: 1.5rem;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 0.25rem;
+  }
+
+  .table-row {
+    padding: 1rem;
+  }
+
+  .actions-menu .menu-trigger {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+  }
+
+  .footer {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+
+  .page-select {
+    width: 100px;
+  }
+}
+
+// Touch-friendly improvements for mobile devices
+@media (hover: none) and (pointer: coarse) {
+  .menu-trigger {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .dropdown-item {
+    padding: 12px 16px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
+  .btn {
+    min-height: 44px;
+    padding: 12px 24px;
+  }
+
+  .add-button {
+    min-height: 48px;
+    font-size: 16px;
+  }
+}
