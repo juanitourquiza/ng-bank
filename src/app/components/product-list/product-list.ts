@@ -211,7 +211,9 @@ export class ProductList implements OnInit, OnDestroy {
    * Formatea la fecha para input de tipo date
    */
   formatDateForInput(dateString: string | Date): string {
+    if (!dateString) return '';
     const date = new Date(dateString);
+    if (isNaN(date.getTime())) return '';
     return date.toISOString().split('T')[0];
   }
 
@@ -460,14 +462,14 @@ export class ProductList implements OnInit, OnDestroy {
   /**
    * TrackBy function para optimizar renderizado de lista
    */
-  trackByProductId(index: number, product: FinancialProduct): string {
-    return product.id;
+  trackByProductId(index: number, product: FinancialProduct): string | number {
+    return product ? product.id : index;
   }
 
   /**
    * TrackBy function para opciones de paginación
    */
-  trackByValue(index: number, value: number): number {
-    return value;
+  trackByValue(index: number, value: any): any {
+    return value !== null && value !== undefined ? value : index;
   }
 }

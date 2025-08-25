@@ -26,10 +26,10 @@ describe('App', () => {
     expect(app.title).toBe('Productos Financieros');
   });
 
-  it('should render product list component', () => {
+  it('should render router outlet', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('app-product-list')).toBeTruthy();
+    expect(compiled.querySelector('router-outlet')).toBeTruthy();
   });
 });
